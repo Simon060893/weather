@@ -4,6 +4,7 @@
 var _main = {
     _arg: {
         ON_MAIN_LOAD: false,
+        LIB_DIRECTORY: false,
         ON_ANIMATE: false
     }
 };
@@ -81,16 +82,17 @@ var _main = {
         }
     })();
 
+
     var scripts = [
-        'http://threejs.org/build/three.min.js',
-        '//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
-        'http://mrdoob.github.io/three.js/examples/js/cameras/CombinedCamera.js',
-        'http://mrdoob.github.io/three.js/examples/js/renderers/CanvasRenderer.js',
-        'http://threejs.org/examples/js/controls/OrbitControls.js',
-        'http://threejs.org/examples/js/Detector.js',
-        'http://threejs.org/examples/js/loaders/DDSLoader.js',
-        'http://threejs.org/examples/js/loaders/MTLLoader.js',
-        'http://threejs.org/examples/js/loaders/OBJMTLLoader.js',
+        //'//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js',
+      'CombinedCamera.js',
+      'CanvasRenderer.js',
+      'OrbitControls.js',
+      'TrackballControls.js',
+      'Detector.js',
+      'DDSLoader.js',
+      'MTLLoader.js',
+      'OBJLoader.js',
     ];
 
     function Main(arg) {
@@ -101,7 +103,7 @@ var _main = {
             jsnFiles: (arg.jsnFiles ? arg.jsnFiles : []),
             cntrName: (arg.containerName ? arg.containerName : 'THREEJS'),
             gl: (arg.render ? arg.render : THREE.WebGLRenderer),
-            cntrls: (arg.controls ? arg.controls : THREE.OrbitControls),
+            cntrls: (arg.controls ? arg.controls : 'OrbitControls'),
             axisHelper: arg.axisHelper,
             animate: arg.ON_ANIMATE,
             loadedObj: [],
@@ -110,10 +112,10 @@ var _main = {
         };
         _t.utils = {
             _SW: function () {
-                return _t.webglEl.container.offsetWidth;
+                return _t.webglEl.container.clientWidth;
             },
             _SH: function () {
-                return _t.webglEl.container.offsetHeight;
+                return _t.webglEl.container.clientHeight;
             },
             loadObj: function (objUrl, mtlUrl, onLoad) {
                 var manager = new THREE.LoadingManager(),
@@ -177,17 +179,20 @@ var _main = {
             ON_DOUBLE_CLICK: 'dblclick',
             ON_MOUSE_MOVE: 'mousemove',
             add: function (dom, callback, isCreate, type) {
+                if(!dom)dom = _t.webglEl.gl.domElement;
                 switch (type) {
                     case 'onwheel':
                     {
-                        if (dom['onwheel']) {
-                            type = type;
-                        } else if (dom['onmousewheel']) {
-                            type = 'onmousewheel';
-                        } else if (dom['mousewheel']) {
+                        if ('onwheel' in document) {
+                            type = 'wheel';
+                        } else if ('onmousewheel' in document) {
                             type = 'mousewheel';
-                        } else if (dom['MozMousePixelScroll']) {
+                        } else if ('mousewheel' in document) {
+                            type = 'mousewheel';
+                        } else if ('MozMousePixelScroll' in document) {
                             type = 'MozMousePixelScroll';
+                        } else if ('DOMMouseScroll' in document) {
+                            type = 'DOMMouseScroll';
                         }
                         break;
                     }
@@ -231,12 +236,14 @@ var _main = {
                 container.id = _wbgl.cntrName;
                 container.style.left = '0';
                 container.style.top = '0';
+                container.style.overflow = 'hidden';
             }
             _wbgl.container = container;
             _w = _m._SW();
             _h = _m._SH();
             scene = _wbgl.scene = new THREE.Scene();
             scene.fog = new THREE.Fog(0xe3cab3, 500, 1000);
+            _wbgl.raycaster = new THREE.Raycaster();
 
             var rendPrm = {preserveDrawingBuffer: true, antialias: true, alpha: true};
             if (_wbgl.gl == THREE.WebGLRenderer && webglAvailable()) {
@@ -252,26 +259,28 @@ var _main = {
             var viewDst = _wbgl.viewDst = 1000;
 
             //camera = _wbgl.camera = new THREE.CombinedCamera(_m._SW()/2,_m._SH()/2, 70, 1, viewDst, -500, viewDst);
-            _wbgl.cameraO = new THREE.OrthographicCamera(_w / -2, _w / 2, _h / 2, _h / -2, -500, viewDst * 2);
+              _wbgl.cameraO = new THREE.OrthographicCamera(_w / -2, _w / 2, _h / 2, _h / -2, -500, viewDst * 2);
             camera = _wbgl.curCamera = _wbgl.cameraP = new THREE.PerspectiveCamera(40, (_w / _h), 0.01, viewDst * 2);
             camera.position.set(viewDst / 2, viewDst / 2, viewDst / 2);
             //camera.zoom = 1.5;
+            //console.log(_wbgl.cntrls,THREE.OrbitControls instanceof THREE.OrbitControls);
+            _wbgl.controls = controls =  new THREE[_wbgl.cntrls](camera, gl.domElement);
 
-            controls = _wbgl.controls = new _wbgl.cntrls(camera, gl.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 1.1;
-            controls.maxPolarAngle = 1.2;
-            controls.rotateSpeed = 5.0;
+            controls.maxPolarAngle = 2*Math.PI;
+            controls.rotateSpeed = 1.20;
             controls.zoomSpeed = 1.5;
             controls.panSpeed = 0.8;
-            controls.noZoom = false;
-            controls.noPan = false;
-            controls.staticMoving = true;
-            controls.dynamicDampingFactor = 0.3;
+            controls.enableZoom  = true;
+            controls.enablePan  = true;
+            //controls.staticMoving = true;
+            controls.dampingFactor  = 0.3;
             controls.keys = [65, 83, 68];
             controls.minDistance = 100;
             controls.maxDistance = viewDst;
             controls.target.set(0, 0, 0);
+
 
             _wbgl.raycaster = new THREE.Raycaster();
             _wbgl.mouseVector = new THREE.Vector3();
@@ -292,6 +301,9 @@ var _main = {
             var fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
             fillLight.position.set(-1, 0, -1);
             scene.add(fillLight);
+
+            //custom
+            if(Main.isFunction(_wbgl.ON_INIT_SCENE))_wbgl.ON_INIT_SCENE();
 
             window.addEventListener('resize', onWindowResize, false);
             animate();
@@ -353,12 +365,16 @@ var _main = {
         return func instanceof Function
     };
     Main.loadScripts = function (link, ready) {
+        var dir = _main._arg.LIB_DIRECTORY;
+        if(link.split('/').length < 2)link = dir+link;
+
         $.getScript(link)
             .done(function (script, textStatus) {
                 //onLoadScript(ready);
+                //console.log('load '+link);
             })
             .fail(function (jqxhr, settings, exception) {
-                console.log(jqxhr);
+                console.log( jqxhr,settings, exception);
             }).always(function () {
                 Main.onLoadScript(ready);
             });
@@ -368,11 +384,15 @@ var _main = {
             Main.loadScripts(scripts.shift(), ready);
         } else {
             _main._gl = new Main(_main._arg);
-            if (Main.isFunction(ready))ready();
+                if (Main.isFunction(ready))ready();
+
         }
     }
 
     $(document).ready(function () {
-        Main.loadScripts(scripts.shift(), _main._arg.ON_MAIN_LOAD);
+        //setTimeout(function(){
+            Main.loadScripts(scripts.shift(), _main._arg.ON_MAIN_LOAD);
+        //},500);
+
     });
 })();

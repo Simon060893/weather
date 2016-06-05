@@ -4,7 +4,8 @@
     "jquery": "latest",
     "jquery-ui": "~1.11.4",
     "bootstrap": "~3.3.6",
-    "three.js": "master"
+    "three.js": "master",
+    "tween.js": "tweenjs#~16.3.4"
   },
   "devDependencies": {}
 }
